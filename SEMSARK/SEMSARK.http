@@ -1,0 +1,6 @@
+@SEMSARK_HostAddress = http://localhost:5167
+
+GET {{SEMSARK_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
