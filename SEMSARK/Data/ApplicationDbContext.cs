@@ -30,6 +30,15 @@ namespace SEMSARK.Data
                 .WithMany(u => u.PaymentsAsRenter)
                 .HasForeignKey(p => p.RenterId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Booking>()
+                .HasOne(b => b.Payment)
+                .WithOne(p => p.Booking)
+                .HasForeignKey<Booking>(b => b.PaymentId)
+                .OnDelete(DeleteBehavior.Restrict); // ← مهم علشان يمنع الكراش وقت الحذف
+
         }
+
+
     }
 }

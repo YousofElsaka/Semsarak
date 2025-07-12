@@ -24,7 +24,9 @@ namespace SEMSARK.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // One-to-one: Payment 
-        public Payment Payment { get; set; }
+        public int? PaymentId { get; set; }  // Nullable
+        public Payment? Payment { get; set; }
+
 
 
     }

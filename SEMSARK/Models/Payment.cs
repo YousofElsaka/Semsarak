@@ -20,5 +20,8 @@ namespace SEMSARK.Models
         public ApplicationUser Owner { get; set; }
         public ApplicationUser Renter { get; set; }
 
+        public Booking Booking { get; set; } // ← لازم تكون موجودة
+
+
     }
 }

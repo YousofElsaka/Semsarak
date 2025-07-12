@@ -87,8 +87,9 @@ public class AccountController : ControllerBase
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _configuration["JwtSettings:ValidIssuer"],
+            audience: _configuration["JwtSettings:ValidAudience"],
+
             claims: claims,
             expires: DateTime.UtcNow.AddHours(6),
             signingCredentials: creds);
