@@ -20,5 +20,8 @@ namespace SEMSARK.Models
         public string UserId { get; set; }
         public ApplicationUser User { get; set; }
         public ICollection<PropertyImage> PropertyImages { get; set; }
+
+        public bool IsPaid { get; set; } = false;
+
     }
 }
