@@ -20,7 +20,6 @@ namespace SEMSARK.Controllers.PropertyControllers
             this.env = env;
         }
 
-        // ✅ رفع صور
         [HttpPost("{propertyId}/images")]
         [Authorize(Roles = "Owner")]
         public async Task<IActionResult> UploadImages(int propertyId, [FromForm] CreatePropertyImageDto dto)
@@ -34,12 +33,22 @@ namespace SEMSARK.Controllers.PropertyControllers
             if (property.UserId != userId)
                 return Forbid("You do not own this property");
 
+            if (string.IsNullOrWhiteSpace(env.WebRootPath))
+                return StatusCode(500, "WebRootPath is not configured.");
+
+            var imagesFolder = Path.Combine(env.WebRootPath, "images");
+            if (!Directory.Exists(imagesFolder))
+                Directory.CreateDirectory(imagesFolder);
+
             var savedPaths = new List<string>();
 
             foreach (var imageFile in dto.Images)
             {
-                var fileName = $"{Guid.NewGuid()}_{imageFile.FileName}";
-                var savePath = Path.Combine(env.WebRootPath, "images", fileName);
+                if (imageFile == null || imageFile.Length == 0)
+                    continue;
+
+                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(imageFile.FileName)}";
+                var savePath = Path.Combine(imagesFolder, fileName);
 
                 using (var stream = new FileStream(savePath, FileMode.Create))
                 {

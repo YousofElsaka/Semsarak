@@ -40,7 +40,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
                 City = dto.City,
                 Region = dto.Region,
                 Street = dto.Street,
-                Status = "Available",
+                Status = "Pending",
                 CreatedAt = DateTime.UtcNow,
                 UserId = userId
             };

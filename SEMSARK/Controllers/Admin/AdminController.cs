@@ -1,0 +1,237 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
+using SEMSARK.Data;
+using SEMSARK.Models;
+
+namespace SEMSARK.Controllers.Admin
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class AdminController : ControllerBase
+    {
+
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
+
+
+        #region User Section
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _userManager.Users.ToListAsync();
+
+            var result = new List<object>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user); 
+
+                result.Add(new
+                {
+                    user.Id,
+                    user.UserName,
+                    user.Email,
+                    user.PhoneNumber,
+                    user.NationalId,
+                    user.IsVerified,
+                    CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Roles = roles 
+                });
+            }
+
+            return Ok(result);
+        }
+
+
+
+        [HttpGet("user/{id}")]
+
+        public async Task<IActionResult> GetUserById(string id)
+        {
+
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+
+            return Ok(new
+            {
+                user.Id,
+                user.UserName,
+                user.Email,
+                user.PhoneNumber,
+                user.NationalId,
+                user.IsVerified,
+                user.CreatedAt,
+                user.VerifiedAt,
+                Roles = roles
+            });
+
+
+
+        }
+
+
+
+        [HttpDelete("user/{id}")]
+
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+
+            {
+
+                return NotFound("User not found");
+            }
+
+            await _userManager.DeleteAsync(user);
+
+            return Ok("User deleted successfully");
+        }
+
+
+        [HttpPut("user/{id}/verify")]
+        public async Task<IActionResult> VerifyUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            user.IsVerified = true;
+            user.VerifiedAt = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                return BadRequest("Failed to verify user");
+            }
+
+            return Ok("User verified successfully");
+
+        }
+
+
+
+        [HttpPut("users/{id}/change-role")]
+        public async Task<IActionResult> ChangeUserRole(string id, [FromQuery] string newRole)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound("User not found");
+
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            await _userManager.AddToRoleAsync(user, newRole);
+
+            return Ok($"User role changed to {newRole}");
+        }
+
+        #endregion
+
+
+        #region Property Section
+
+        [HttpGet("properties")]
+
+        public async Task<IActionResult> GetAllProperties()
+        {
+
+            var properties = await _context.Properties.Include(p => p.User)
+               .Select(p => new
+               {
+
+                   p.Id,
+                   p.Title,
+                   p.Description,
+                   p.Price,
+                   p.City,
+                   p.Region,
+                   p.Status,
+                   Owner = new
+                   {
+                       p.User.Id,
+                       p.User.UserName,
+                       p.User.Email
+                   }
+
+               }).ToListAsync();
+            return Ok(properties);
+
+        }
+
+
+        [HttpGet("property/{id}")]
+
+        public async Task<IActionResult> DeleteProperty(int id)
+        {
+            var property = await _context.Properties.FindAsync(id);
+
+            if (property == null)
+            {
+                return NotFound("Property not found");
+            }
+
+            _context.Properties.Remove(property);
+            await _context.SaveChangesAsync();
+            return Ok("Property deleted successfully");
+
+
+
+
+
+
+
+           
+
+
+         
+
+
+
+
+
+        }
+
+
+
+        [HttpPut("properties/{id}/change-status")]
+        public async Task <IActionResult> ChangePropertyStatus(int id, [FromQuery] string newStatus)
+
+        {
+            var property = await _context.Properties.FindAsync(id);
+            if (property == null)
+                return NotFound("Property not found");
+
+            property.Status = newStatus;
+            await _context.SaveChangesAsync();
+
+            return Ok($"Property status updated to: {newStatus}");
+        }
+
+
+        #endregion
+
+
+
+   
+    }
+
+}
