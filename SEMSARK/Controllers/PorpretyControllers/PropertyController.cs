@@ -73,7 +73,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
+        [Authorize(Roles = "Renter")]
         public async Task<IActionResult> GetAllProperties()
         {
             var properties = await context.Properties
@@ -94,7 +94,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
         }
 
         [HttpGet("{id}")]
-        [AllowAnonymous]
+        [Authorize(Roles = "Renter")]
         public async Task<IActionResult> GetById(int id)
         {
             var property = await context.Properties

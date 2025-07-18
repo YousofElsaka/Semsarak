@@ -19,7 +19,7 @@ public class AccountController : ControllerBase
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        RoleManager<Role> roleManager, // ✅ عدلنا هنا النوع
+        RoleManager<Role> roleManager,
         IConfiguration configuration)
     {
         _userManager = userManager;
@@ -42,6 +42,7 @@ public class AccountController : ControllerBase
         {
             UserName = model.Username,
             Email = model.Email,
+            PhoneNumber = model.PhoneNumber,
             NationalId = model.NationalId 
         };
 
