@@ -6,28 +6,26 @@ using SEMSARK.Data;
 using SEMSARK.Models;
 using SEMSARK.DTOS;
 using SEMSARK.DTOS.PropertyDTOS;
+
 namespace SEMSARK.Controllers.PorpretyControllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class PropertyController : ControllerBase
     {
-
         private readonly ApplicationDbContext context;
-        private readonly UserManager<ApplicationUser> userManager; // Assuming ApplicationDbContext is your user context   
+        private readonly UserManager<ApplicationUser> userManager;
+
         public PropertyController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             this.context = context;
             this.userManager = userManager;
         }
 
-
-
         [HttpPost]
         [Authorize(Roles = "Owner")]
         public async Task<IActionResult> CreateProperty([FromBody] CreatePropertyDto dto)
         {
-
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
             var property = new Property
@@ -40,7 +38,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
                 City = dto.City,
                 Region = dto.Region,
                 Street = dto.Street,
-                Status = "Pending",
+                Status = "Available",
                 CreatedAt = DateTime.UtcNow,
                 UserId = userId
             };
@@ -48,41 +46,60 @@ namespace SEMSARK.Controllers.PorpretyControllers
             context.Properties.Add(property);
             await context.SaveChangesAsync();
             return Ok(property);
-
         }
 
+        // ✅ Endpoint جديد: عقارات الأونر الحالي فقط
+        [HttpGet("my-properties")]
+        [Authorize(Roles = "Owner")]
+        public async Task<IActionResult> GetMyProperties()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var myProperties = await context.Properties
+                .Where(p => p.UserId == userId)
+                .Include(p => p.PropertyImages)
+                .Select(p => new PropertyDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Price = p.Price,
+                    City = p.City,
+                    Region = p.Region,
+                    Status = p.Status,
+                    ImagePaths = p.PropertyImages.Select(img => img.ImagePath).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(myProperties);
+        }
 
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllProperties()
         {
-
             var properties = await context.Properties
-         .Include(p => p.PropertyImages)
-         .Select(p => new PropertyDto
-         {
-             Id = p.Id,
-             Title = p.Title,
-             Price = p.Price,
-             City = p.City,
-             Region = p.Region,
-             Status = p.Status,
-             ImagePaths = p.PropertyImages.Select(img => img.ImagePath).ToList()
-         })
-         .ToListAsync();
+                .Include(p => p.PropertyImages)
+                .Select(p => new PropertyDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Price = p.Price,
+                    City = p.City,
+                    Region = p.Region,
+                    Status = p.Status,
+                    ImagePaths = p.PropertyImages.Select(img => img.ImagePath).ToList()
+                })
+                .ToListAsync();
 
             return Ok(properties);
         }
 
-
-
         [HttpGet("{id}")]
         [AllowAnonymous]
-
         public async Task<IActionResult> GetById(int id)
         {
-
-            var property = await context.Properties.Include(p => p.PropertyImages).Include(p => p.User)
+            var property = await context.Properties
+                .Include(p => p.PropertyImages)
+                .Include(p => p.User)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (property == null)
@@ -110,15 +127,13 @@ namespace SEMSARK.Controllers.PorpretyControllers
             return Ok(dto);
         }
 
-
         [HttpPut("{id}")]
         [Authorize(Roles = "Owner")]
-
-        public async  Task<IActionResult> UpdateProperty(int id , [FromBody] UpdatePropertyDto dto)
+        public async Task<IActionResult> UpdateProperty(int id, [FromBody] UpdatePropertyDto dto)
         {
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            var property = await context.Properties.FirstOrDefaultAsync(p => p.Id == id );
+            var property = await context.Properties.FirstOrDefaultAsync(p => p.Id == id);
 
             if (property == null)
             {
@@ -127,8 +142,6 @@ namespace SEMSARK.Controllers.PorpretyControllers
 
             if (property.UserId != userId)
                 return Forbid("You are not allowed to edit this property");
-
-
 
             property.Title = dto.Title;
             property.Description = dto.Description;
@@ -146,7 +159,6 @@ namespace SEMSARK.Controllers.PorpretyControllers
             return Ok(property);
         }
 
-
         [HttpDelete("{id}")]
         [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteProperty(int id)
@@ -163,19 +175,12 @@ namespace SEMSARK.Controllers.PorpretyControllers
             if (property.UserId != userId)
                 return Forbid("You are not allowed to delete this property");
 
-        
             context.PropertyImages.RemoveRange(property.PropertyImages);
-
-         
             context.Properties.Remove(property);
 
             await context.SaveChangesAsync();
 
             return Ok("Property deleted successfully");
         }
-
-
-
     }
 }
-    

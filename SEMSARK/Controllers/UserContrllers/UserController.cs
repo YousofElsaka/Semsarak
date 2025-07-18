@@ -36,7 +36,7 @@ namespace SEMSARK.Controllers.UserContrllers
 
             var dto = new UserProfileDto
             {
-               Id = user.Id,
+            Id = user.Id,
             UserName = user.UserName,
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
