@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SEMSARK.Data;
 using SEMSARK.Models;
 using SEMSARK.DTOS.PropertyImageDTOS;
+using System.IO;
 
 namespace SEMSARK.Controllers.PropertyControllers
 {
@@ -36,28 +37,56 @@ namespace SEMSARK.Controllers.PropertyControllers
 
             var savedPaths = new List<string>();
 
-            foreach (var imageFile in dto.Images)
+            // تأكد من وجود WebRootPath
+            string webRootPath = env.WebRootPath;
+            if (string.IsNullOrEmpty(webRootPath))
             {
-                var fileName = $"{Guid.NewGuid()}_{imageFile.FileName}";
-                var savePath = Path.Combine(env.WebRootPath, "images", fileName);
-
-                using (var stream = new FileStream(savePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(stream);
-                }
-
-                var image = new PropertyImage
-                {
-                    PropertyId = propertyId,
-                    ImagePath = $"/images/{fileName}"
-                };
-
-                context.PropertyImages.Add(image);
-                savedPaths.Add(image.ImagePath);
+                webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                if (!Directory.Exists(webRootPath))
+                    Directory.CreateDirectory(webRootPath);
             }
 
-            await context.SaveChangesAsync();
-            return Ok(new { message = "Images uploaded", paths = savedPaths });
+            // تأكد من وجود فولدر الصور
+            var imagesPath = Path.Combine(webRootPath, "images");
+            if (!Directory.Exists(imagesPath))
+                Directory.CreateDirectory(imagesPath);
+
+            try
+            {
+                if (dto.Images == null || dto.Images.Count == 0)
+                    return BadRequest("No images uploaded.");
+
+                foreach (var imageFile in dto.Images)
+                {
+                    if (imageFile == null || imageFile.Length == 0)
+                        continue;
+
+                    var fileName = $"{Guid.NewGuid()}_{imageFile.FileName}";
+                    var savePath = Path.Combine(imagesPath, fileName);
+
+                    using (var stream = new FileStream(savePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    var image = new PropertyImage
+                    {
+                        PropertyId = propertyId,
+                        ImagePath = $"/images/{fileName}"
+                    };
+
+                    context.PropertyImages.Add(image);
+                    savedPaths.Add(image.ImagePath);
+                }
+
+                await context.SaveChangesAsync();
+                return Ok(new { message = "Images uploaded", paths = savedPaths });
+            }
+            catch (Exception ex)
+            {
+                // لو حصل أي خطأ أثناء الحفظ
+                return StatusCode(500, $"Error saving images: {ex.Message}");
+            }
         }
 
         // ✅ حذف صورة
@@ -74,7 +103,13 @@ namespace SEMSARK.Controllers.PropertyControllers
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (image.Property.UserId != userId) return Forbid("You do not own this property");
 
-            var path = Path.Combine(env.WebRootPath, image.ImagePath.TrimStart('/'));
+            string webRootPath = env.WebRootPath;
+            if (string.IsNullOrEmpty(webRootPath))
+            {
+                webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            }
+
+            var path = Path.Combine(webRootPath, image.ImagePath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
             if (System.IO.File.Exists(path))
                 System.IO.File.Delete(path);
 

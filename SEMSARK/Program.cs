@@ -9,18 +9,21 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ تفعيل CORS
+// ✅ إعداد CORS للسماح للفرونت
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://127.0.0.1:5500") // رابط الفرونت
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy.WithOrigins(
+            "http://localhost:4200",
+            "http://127.0.0.1:4200"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
     });
 });
 
-// ✅ إعداد قاعدة البيانات
+// ✅ إعداد الاتصال بقاعدة البيانات
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("cs")));
 
@@ -55,7 +58,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ✅ إعداد Swagger مع دعم التوكن
+// ✅ إعداد Swagger مع التوثيق
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "SEMSARK API", Version = "v1" });
@@ -93,6 +96,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
+// ✅ تشغيل Swagger في وضع التطوير
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -101,7 +105,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// ✅ تفعيل CORS
+// ✅ تفعيل عرض الملفات الثابتة (الصور وغيرها)
+app.UseStaticFiles();
+
+// ✅ تفعيل CORS قبل التوثيق
 app.UseCors("AllowFrontend");
 
 // ✅ تفعيل التوثيق والتفويض
