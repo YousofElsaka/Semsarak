@@ -15,6 +15,9 @@ namespace SEMSARK.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
+        private const double AdvertiseCommissionRate = 0.05;
+        private const double BookingCommissionRate = 0.05;
+
         public PaymentController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
@@ -34,7 +37,7 @@ namespace SEMSARK.Controllers
             if (property.IsPaid)
                 return BadRequest("This property has already been paid for.");
 
-            double commission = property.Price * 0.05;
+            double commission = property.Price * AdvertiseCommissionRate;
 
             var payment = new Payment
             {
@@ -43,7 +46,7 @@ namespace SEMSARK.Controllers
                 PropertyId = property.Id,
                 OwnerId = userId,
                 PaymentType = "Advertise",
-                Status = "Paid", 
+                Status = "Paid",
                 IsConfirmed = true
             };
 
@@ -61,7 +64,6 @@ namespace SEMSARK.Controllers
                 Commission = payment.Commission
             });
         }
-
 
         [HttpPost("booking")]
         [Authorize(Roles = "Renter")]
@@ -81,8 +83,7 @@ namespace SEMSARK.Controllers
 
             var totalDays = (booking.EndDate - booking.StartDate).TotalDays;
             var amount = booking.Property.Price * totalDays;
-
-            var commission = amount * 0.1; 
+            var commission = amount * BookingCommissionRate;
 
             var payment = new Payment
             {
@@ -92,7 +93,7 @@ namespace SEMSARK.Controllers
                 RenterId = userId,
                 OwnerId = booking.Property.UserId,
                 PaymentType = "Booking",
-                Status = "Paid", 
+                Status = "Paid",
                 IsConfirmed = true
             };
 
@@ -111,7 +112,6 @@ namespace SEMSARK.Controllers
                 Commission = commission
             });
         }
-
 
         [HttpGet("my-payments")]
         [Authorize]
@@ -139,6 +139,5 @@ namespace SEMSARK.Controllers
 
             return Ok(payments);
         }
-
     }
 }
