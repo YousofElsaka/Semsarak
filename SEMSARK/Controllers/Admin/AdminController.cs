@@ -177,8 +177,8 @@ namespace SEMSARK.Controllers.Admin
 
         }
 
-
-        [HttpGet("property/{id}")]
+        //yousef eldbah
+        [HttpDelete("property/{id}")]
 
         public async Task<IActionResult> DeleteProperty(int id)
         {
@@ -210,7 +210,37 @@ namespace SEMSARK.Controllers.Admin
 
         }
 
+        [HttpGet("property-details/{id}")]
+        public async Task<IActionResult> GetPropertyDetails(int id)
+        {
+            var property = await _context.Properties
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
+            if (property == null)
+                return NotFound("Property not found");
+
+            return Ok(new
+            {
+                property.Id,
+                property.Title,
+                property.Description,
+                property.Price,
+                property.City,
+                property.Region,
+                property.Status,
+                property.RoomsCount,
+                property.GenderPreference,
+                property.Street,
+                Owner = new
+                {
+                    property.User.Id,
+                    property.User.UserName,
+                    property.User.Email
+                }
+                // أضف أي بيانات أخرى تريدها هنا  Yousef eldbah
+            });
+        }
 
         [HttpPut("properties/{id}/change-status")]
         public async Task <IActionResult> ChangePropertyStatus(int id, [FromQuery] string newStatus)

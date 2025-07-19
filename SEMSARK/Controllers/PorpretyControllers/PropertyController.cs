@@ -93,8 +93,12 @@ namespace SEMSARK.Controllers.PorpretyControllers
             return Ok(properties);
         }
 
+
+
+
+        //yousef eldbah
         [HttpGet("{id}")]
-        [Authorize(Roles = "Renter")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             var property = await context.Properties
