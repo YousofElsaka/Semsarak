@@ -38,7 +38,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
                 City = dto.City,
                 Region = dto.Region,
                 Street = dto.Street,
-                Status = "Available",
+                Status = "Pending",  //  لازم كده علشان نستنى البايمنت
                 CreatedAt = DateTime.UtcNow,
                 UserId = userId
             };
@@ -77,6 +77,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
         public async Task<IActionResult> GetAllProperties()
         {
             var properties = await context.Properties
+                .Where(p => p.Status == "Available") //  هنا بنفلتر اللي ظاهر للمستأجرين => الشقق المتاحه فقط
                 .Include(p => p.PropertyImages)
                 .Select(p => new PropertyDto
                 {
