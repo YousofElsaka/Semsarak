@@ -6,6 +6,7 @@ using System.Text;
 using SEMSARK.Data;
 using SEMSARK.Models;
 using Microsoft.OpenApi.Models;
+using SEMSARK.Services.Payment;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +99,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
            .EnableSensitiveDataLogging()
            .LogTo(Console.WriteLine, LogLevel.Information));
 
+builder.Services.AddHttpClient();  // payment gateway
+builder.Services.AddScoped<PaymobService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

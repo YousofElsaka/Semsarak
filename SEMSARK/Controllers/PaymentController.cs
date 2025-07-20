@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SEMSARK.Data;
 using SEMSARK.DTOS.PaymentDTO;
 using SEMSARK.Models;
+using SEMSARK.Services.Payment;
 
 namespace SEMSARK.Controllers
 {
@@ -15,13 +16,17 @@ namespace SEMSARK.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
+        private readonly PaymobService _paymobService;
+        private readonly int _iframeId = 941402; 
+
         private const double AdvertiseCommissionRate = 0.05;
         private const double BookingCommissionRate = 0.05;
 
-        public PaymentController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public PaymentController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, PaymobService paymobService)
         {
             _context = context;
             _userManager = userManager;
+            _paymobService = paymobService;
         }
 
         [HttpPost("advertise")]
@@ -139,5 +144,99 @@ namespace SEMSARK.Controllers
 
             return Ok(payments);
         }
+
+
+        [HttpPost("paymob-initiate")]
+        [Authorize]
+        public async Task<IActionResult> InitiatePayment([FromBody] InitiatePaymentRequestDTO dto)
+        {
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return Unauthorized();
+
+            var authToken = await _paymobService.GetAuthTokenAsync();
+            if (authToken == null)
+                return StatusCode(500, "Failed to authenticate with Paymob.");
+
+            var orderId = await _paymobService.CreateOrderAsync(authToken, dto.AmountCents);
+            if (orderId == null)
+                return StatusCode(500, "Failed to create order in Paymob.");
+
+            var paymentKey = await _paymobService.GetPaymentKeyAsync(
+                authToken,
+                orderId.Value,
+                dto.AmountCents,
+                user.Email,
+                user.UserName ?? "Client"
+            );
+
+            if (paymentKey == null)
+                return StatusCode(500, "Failed to generate payment key.");
+
+            return Ok(new
+            {
+                PaymentKey = paymentKey,
+                IframeUrl = $"https://accept.paymob.com/api/acceptance/iframes/{_iframeId}?payment_token={paymentKey}"
+            });
+        }
+
+
+        [HttpPost("paymob-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PaymobCallback()
+        {
+            using var reader = new StreamReader(Request.Body);
+            var body = await reader.ReadToEndAsync();
+
+            //  هنسجل البيانات عشان نعرف شكلها
+            Console.WriteLine(" Paymob Callback Received:");
+            Console.WriteLine(body);
+
+            // ✅ بعدين نعمل Parse فعلي للبيانات
+            return Ok();
+        }
+
+
+        [HttpPost("paymob-confirm")]
+        [Authorize]
+        public async Task<IActionResult> ConfirmPaymobPayment([FromBody] string transactionId)
+        {
+            var isSuccess = await _paymobService.GetTransactionStatusAsync(transactionId);
+            if (!isSuccess)
+                return BadRequest("Payment failed or not completed.");
+
+            // دور على الـ payment اللي لسه مدفوعش ولسه مش متسجل ليه TransactionId
+            var payment = await _context.Payments
+                .Where(p => p.TransactionId == null && p.Status != "Paid")
+                .OrderByDescending(p => p.DateTime)
+                .FirstOrDefaultAsync();
+
+            if (payment == null)
+                return NotFound("No pending payment found.");
+
+            // عدل البيانات
+            payment.Status = "Paid";
+            payment.IsConfirmed = true;
+            payment.TransactionId = transactionId;
+
+            // لو ليه Booking
+            if (payment.BookingId.HasValue)
+            {
+                var booking = await _context.Bookings.FindAsync(payment.BookingId.Value);
+                if (booking != null)
+                {
+                    booking.Status = "Approved";
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Payment confirmed and saved successfully." });
+        }
+
+
+
     }
 }
