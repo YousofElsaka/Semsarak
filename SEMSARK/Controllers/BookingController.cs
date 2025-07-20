@@ -66,11 +66,18 @@ namespace SEMSARK.Controllers
             var bookings = await _context.Bookings
                 .Where(b => b.RenterId == userId)
                 .Include(b => b.Property)
+                    .ThenInclude(p => p.PropertyImages)
                 .Select(b => new BookingReadDTO
                 {
                     Id = b.Id,
                     PropertyId = b.PropertyId,
                     PropertyTitle = b.Property.Title,
+                    Price = b.Property.Price,
+                    City = b.Property.City,
+                    Region = b.Property.Region,
+                    RoomsCount = b.Property.RoomsCount,
+                    ImageUrls = b.Property.PropertyImages.Select(img => img.ImagePath).ToList(),
+
                     RenterId = b.RenterId,
                     StartDate = b.StartDate,
                     EndDate = b.EndDate,
@@ -78,6 +85,7 @@ namespace SEMSARK.Controllers
                     CreatedAt = b.CreatedAt
                 })
                 .ToListAsync();
+
 
             return Ok(bookings);
         }
