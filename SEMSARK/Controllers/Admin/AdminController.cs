@@ -29,15 +29,12 @@ namespace SEMSARK.Controllers.Admin
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _userManager.Users.ToListAsync();
+            // الحل هنا عشان احل مشكلة انو لو عندي 1000 يوزر وعايز اجيبهم كلهم مع ال رولز بتاعتهم
+            // دي مشكله لأنها هتعمل لودينج كبير على السيرفر
+             // دي مشكلهn+1  بطريقه دي             
 
-            var result = new List<object>();
-
-            foreach (var user in users)
-            {
-                var roles = await _userManager.GetRolesAsync(user); 
-
-                result.Add(new
+            var usersWithRoles = await _context.Users
+                .Select(user => new
                 {
                     user.Id,
                     user.UserName,
@@ -46,12 +43,16 @@ namespace SEMSARK.Controllers.Admin
                     user.NationalId,
                     user.IsVerified,
                     CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                    Roles = roles 
-                });
-            }
+                    Roles = (from ur in _context.UserRoles
+                             join r in _context.Roles on ur.RoleId equals r.Id
+                             where ur.UserId == user.Id
+                             select r.Name).ToList()
+                })
+                .ToListAsync();
 
-            return Ok(result);
+            return Ok(usersWithRoles);
         }
+
 
 
 

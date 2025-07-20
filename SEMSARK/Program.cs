@@ -91,6 +91,14 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString)
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 

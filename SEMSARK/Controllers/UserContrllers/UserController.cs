@@ -92,8 +92,11 @@ namespace SEMSARK.Controllers.UserContrllers
                 return NotFound("User not found.");
             }
 
-            userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
-        
+            var result = await userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                return BadRequest("Failed to change password. Please check your current password.");
+            }
 
             return Ok("Password changed successfully.");
         }

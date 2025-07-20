@@ -156,8 +156,6 @@ namespace SEMSARK.Controllers.PorpretyControllers
             property.City = dto.City;
             property.Region = dto.Region;
             property.Street = dto.Street;
-            property.Status = dto.Status;
-
             context.Properties.Update(property);
             await context.SaveChangesAsync();
 

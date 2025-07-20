@@ -18,7 +18,7 @@
 
         public string Street { get; set; }
 
-        public string Status { get; set; } 
+  
     }
 
 }
