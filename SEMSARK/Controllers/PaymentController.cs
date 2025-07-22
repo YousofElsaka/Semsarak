@@ -51,20 +51,22 @@ namespace SEMSARK.Controllers
                 PropertyId = property.Id,
                 OwnerId = userId,
                 PaymentType = "Advertise",
-                Status = "Paid",
-                IsConfirmed = true
+
+                Status = "Pending",         
+                IsConfirmed = false,       
+                TransactionId = null
             };
 
             _context.Payments.Add(payment);
 
-            property.IsPaid = true;
-            property.Status = "Available";
+            property.IsPaid = false;
+            property.Status = "Pending";
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                Message = "Payment successful and property published.",
+                Message = "Payment initiated. Please proceed to payment to publish the property.",
                 PaymentId = payment.Id,
                 Commission = payment.Commission
             });
@@ -98,25 +100,27 @@ namespace SEMSARK.Controllers
                 RenterId = userId,
                 OwnerId = booking.Property.UserId,
                 PaymentType = "Booking",
-                Status = "Paid",
-                IsConfirmed = true
+                Status = "Pending",
+                IsConfirmed = false,
+                TransactionId = null
             };
 
             _context.Payments.Add(payment);
 
-            booking.Status = "Approved";
-            _context.Bookings.Update(booking);
+            // ❌ متعملش approve دلوقتي
+            // ✅ هيتم في paymob-confirm بعد الدفع
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                Message = "Payment successful and booking confirmed.",
+                Message = "Booking payment initiated. Please proceed to payment.",
                 PaymentId = payment.Id,
                 TotalAmount = amount,
                 Commission = commission
             });
         }
+
 
         [HttpGet("my-payments")]
         [Authorize]
@@ -207,21 +211,20 @@ namespace SEMSARK.Controllers
             if (!isSuccess)
                 return BadRequest("Payment failed or not completed.");
 
-            // دور على الـ payment اللي لسه مدفوعش ولسه مش متسجل ليه TransactionId
             var payment = await _context.Payments
-                .Where(p => p.TransactionId == null && p.Status != "Paid")
+                .Where(p => p.Status == "Pending" && p.TransactionId == null)
                 .OrderByDescending(p => p.DateTime)
                 .FirstOrDefaultAsync();
+
 
             if (payment == null)
                 return NotFound("No pending payment found.");
 
-            // عدل البيانات
             payment.Status = "Paid";
             payment.IsConfirmed = true;
             payment.TransactionId = transactionId;
 
-            // لو ليه Booking
+            // ✅ لو الحجز → نعدل حالته
             if (payment.BookingId.HasValue)
             {
                 var booking = await _context.Bookings.FindAsync(payment.BookingId.Value);
@@ -231,10 +234,23 @@ namespace SEMSARK.Controllers
                 }
             }
 
+            // ✅ لو إعلان → نعدل حالة العقار
+            if (payment.PropertyId.HasValue)
+            {
+                var property = await _context.Properties.FindAsync(payment.PropertyId.Value);
+                if (property != null)
+                {
+                    property.IsPaid = true;
+                    property.Status = "Available";
+                }
+            }
+
+            // ✅ ده لازم يكون بعد التعديلات على العقار والدفع
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Payment confirmed and saved successfully." });
         }
+
 
 
 
