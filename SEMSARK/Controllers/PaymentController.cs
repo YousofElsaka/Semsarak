@@ -15,9 +15,8 @@ namespace SEMSARK.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-
         private readonly PaymobService _paymobService;
-        private readonly int _iframeId = 941402; 
+        private readonly int _iframeId = 941402;
 
         private const double AdvertiseCommissionRate = 0.05;
         private const double BookingCommissionRate = 0.05;
@@ -34,6 +33,7 @@ namespace SEMSARK.Controllers
         public async Task<IActionResult> CreateAdvertisePayment([FromBody] CreateAdvertisePaymentDTO dto)
         {
             var userId = _userManager.GetUserId(User);
+            var user = await _userManager.FindByIdAsync(userId);
 
             var property = await _context.Properties.FindAsync(dto.PropertyId);
             if (property == null || property.UserId != userId)
@@ -51,9 +51,8 @@ namespace SEMSARK.Controllers
                 PropertyId = property.Id,
                 OwnerId = userId,
                 PaymentType = "Advertise",
-
-                Status = "Pending",         
-                IsConfirmed = false,       
+                Status = "Pending",
+                IsConfirmed = false,
                 TransactionId = null
             };
 
@@ -64,11 +63,25 @@ namespace SEMSARK.Controllers
 
             await _context.SaveChangesAsync();
 
+            // أضف redirectUrl هنا
+            var authToken = await _paymobService.GetAuthTokenAsync();
+            var redirectUrl = "http://localhost:4200/payment-callback"; 
+            var orderId = await _paymobService.CreateOrderAsync(authToken, (int)(property.Price * 100), "EGP", redirectUrl);
+            var paymentKey = await _paymobService.GetPaymentKeyAsync(
+                authToken,
+                orderId.Value,
+                (int)(property.Price * 100),
+                user.Email,
+                user.UserName ?? "Client"
+            );
+            var iframeUrl = $"https://accept.paymob.com/api/acceptance/iframes/{_iframeId}?payment_token={paymentKey}";
+
             return Ok(new
             {
                 Message = "Payment initiated. Please proceed to payment to publish the property.",
                 PaymentId = payment.Id,
-                Commission = payment.Commission
+                Commission = payment.Commission,
+                iframeUrl = iframeUrl // بحرف صغير i
             });
         }
 
@@ -121,7 +134,6 @@ namespace SEMSARK.Controllers
             });
         }
 
-
         [HttpGet("my-payments")]
         [Authorize]
         public async Task<IActionResult> GetMyPayments()
@@ -148,7 +160,6 @@ namespace SEMSARK.Controllers
 
             return Ok(payments);
         }
-
 
         [HttpPost("paymob-initiate")]
         [Authorize]
@@ -186,7 +197,6 @@ namespace SEMSARK.Controllers
             });
         }
 
-
         [HttpPost("paymob-callback")]
         [AllowAnonymous]
         public async Task<IActionResult> PaymobCallback()
@@ -202,7 +212,6 @@ namespace SEMSARK.Controllers
             return Ok();
         }
 
-
         [HttpPost("paymob-confirm")]
         [Authorize]
         public async Task<IActionResult> ConfirmPaymobPayment([FromBody] string transactionId)
@@ -215,7 +224,6 @@ namespace SEMSARK.Controllers
                 .Where(p => p.Status == "Pending" && p.TransactionId == null)
                 .OrderByDescending(p => p.DateTime)
                 .FirstOrDefaultAsync();
-
 
             if (payment == null)
                 return NotFound("No pending payment found.");
@@ -250,9 +258,5 @@ namespace SEMSARK.Controllers
 
             return Ok(new { Message = "Payment confirmed and saved successfully." });
         }
-
-
-
-
     }
 }

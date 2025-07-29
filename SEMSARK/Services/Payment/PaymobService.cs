@@ -10,7 +10,7 @@ namespace SEMSARK.Services.Payment
     {
         private readonly HttpClient _httpClient;
         private readonly string _apiKey;
-        private readonly int _integrationId = 5198369; 
+        private readonly int _integrationId = 5198369;
 
         public PaymobService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
@@ -36,7 +36,8 @@ namespace SEMSARK.Services.Payment
             return doc.RootElement.GetProperty("token").GetString();
         }
 
-        public async Task<int?> CreateOrderAsync(string token, int amountCents, string currency = "EGP")
+        // تم تعديل الدالة لتقبل redirectUrl
+        public async Task<int?> CreateOrderAsync(string token, int amountCents, string currency = "EGP", string? redirectUrl = null)
         {
             var requestBody = new
             {
@@ -44,7 +45,8 @@ namespace SEMSARK.Services.Payment
                 delivery_needed = false,
                 amount_cents = amountCents,
                 currency = currency,
-                items = new List<object>() // فاضي عشان مش بنبيع منتجات
+                items = new List<object>(), // فاضي عشان مش بنبيع منتجات
+                redirect_url = redirectUrl // أضف هذا السطر
             };
 
             var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
@@ -67,7 +69,7 @@ namespace SEMSARK.Services.Payment
                 expiration = 3600,
                 order_id = orderId,
                 currency = "EGP",
-                integration_id = _integrationId, 
+                integration_id = _integrationId,
                 billing_data = new
                 {
                     email = billingEmail,
@@ -95,7 +97,6 @@ namespace SEMSARK.Services.Payment
             return doc.RootElement.GetProperty("token").GetString();
         }
 
-
         public async Task<bool> GetTransactionStatusAsync(string transactionId)
         {
             var authToken = await GetAuthTokenAsync();
@@ -113,7 +114,5 @@ namespace SEMSARK.Services.Payment
 
             return success;
         }
-
-
     }
 }

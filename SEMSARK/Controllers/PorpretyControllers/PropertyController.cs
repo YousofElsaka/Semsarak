@@ -86,6 +86,7 @@ namespace SEMSARK.Controllers.PorpretyControllers
                     Price = p.Price,
                     City = p.City,
                     Region = p.Region,
+
                     Status = p.Status,
                     ImagePaths = p.PropertyImages.Select(img => img.ImagePath).ToList()
                 })
