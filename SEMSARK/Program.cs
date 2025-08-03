@@ -24,9 +24,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ✅ إعداد الاتصال بقاعدة البيانات
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("cs")));
+
 
 // ✅ إعداد الهوية (Identity)
 builder.Services.AddIdentity<ApplicationUser, Role>()
@@ -58,6 +56,8 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
     };
 });
+
+
 
 // ✅ إعداد Swagger مع التوثيق
 builder.Services.AddSwaggerGen(c =>
@@ -91,6 +91,8 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 

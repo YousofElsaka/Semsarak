@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Client;
 using SEMSARK.Data;
+using SEMSARK.DTOS.Admin;
 using SEMSARK.Models;
 
 namespace SEMSARK.Controllers.Admin
@@ -261,8 +262,46 @@ namespace SEMSARK.Controllers.Admin
         #endregion
 
 
+        [HttpGet("dashboard")]
 
-   
+        public async Task<ActionResult<AdminDashboardDto>> GetDashboardStats()
+        {
+
+
+            var totalProfitFromBookings = await _context.Payments
+                 .Where(p => p.PaymentType == "Booking" && p.IsConfirmed)
+                 .SumAsync(p => (decimal?)p.Commission) ?? 0;
+
+            var totalProfitFromAds =  await _context.Payments .Where(p => p.PaymentType == "Advertise" && p.IsConfirmed)
+                .SumAsync(p => (decimal?)p.Commission) ?? 0;
+
+
+            var renters = await _userManager.GetUsersInRoleAsync("Renter");
+            var totalRenters = renters.Count;
+
+            var owners = await _userManager.GetUsersInRoleAsync("Owner");
+            var totalOwners = owners.Count;
+
+
+
+            var result = new AdminDashboardDto
+            {
+                TotalProfitFromBookings = totalProfitFromBookings,
+                TotalProfitFromAdvertisements = totalProfitFromAds,
+                TotalRenters = totalRenters,
+                TotalOwners = totalOwners
+            };
+
+            return Ok(result);
+
+
+
+
+
+        }
+
+
+
     }
 
 }
